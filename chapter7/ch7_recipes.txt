@@ -1,0 +1,346 @@
+Hive server modes and setup
+
+2.
+
+$ hadoop fs –ls /
+$ yarn jar <path_to_jar>/hadoop-mapreduce-examples-2.7.2.jar pi 2 2
+
+3.
+
+$ wget mirror.ventraip.net.au/apache/hive/stable/apache-hive-1.2.1-bin.tar.gz
+
+4.	Now untar the Hive package as follows:
+$ tar –zxvf apache-hive-1.2.1-bin.tar.gz
+
+5.	Create a symlink to the Hive package as follows:
+$ ln –s apache-hive-1.2.1-bin hive
+
+6.
+
+export HADOOP_HOME=/home/hadoop/hadoop
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export YARN_HOME=$HADOOP_HOME
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
+
+export HIVE_HOME=/opt/cluster/hive
+
+PATH=$$HIVE_HOME/bin:HADOOP_HOME/bin/:$HADOOP_HOME/sbin/:$JAVA_HOME/bin/:$PATH
+export PATH
+
+Using MySQL for Hive metastore
+
+6.	Now change to the$HIVE_HOME/conf directory and create a file hive-site.xml with the following configuration:
+<configuration>
+<property>
+<name>hive.metastore.local</name>
+<value>true</value>
+</property>
+<property>
+<name>javax.jdo.option.ConnectionURL</name>
+<value>jdbc:mysql://master1.cyrus.com:3306/hive_db?createDatabaseIfNotExist=true</value>
+</property>
+
+7.	Now, let's specify the username and password strings for the connection, as follows:
+<property>
+<name>javax.jdo.option.ConnectionUserName</name>
+<value>hadoop</value>
+</property>
+
+<property>
+<name>javax.jdo.option.ConnectionPassword</name>
+<value>hadoop</value>
+</property>
+</configuration>
+
+8.	Now we have to install the MySQL JDBC driver for Hive to connect to MySQL. Download the driver from https://dev.mysql.com/downloads/connector/j/5.1.html,extract the JAR, and copy it to the location $HIVE_HOME/lib, as follows:
+$ tar -xzvfmysql-connector-java-5.1.39.tar.gz
+$ cp mysql-connector-java-5.1.39/mysql-connector-java-5.1.39-bin.jar hive/lib/
+
+Operating Hive with ZooKeeper
+
+2.	Modify the hive-site.xml file and enable the table manager by using the properties as follows. This is for concurrency:
+<property>
+<name>hive.support.concurrency</name>
+<value>true</value>
+</property>
+
+<property>
+<name>hive.zookeeper.quorum</name>
+<value>master1.cyrus.com,edge1.cyrus.com, rt1.cyrus.com</value>
+</property>
+
+<property>
+<name>hive.zookeeper.client.port</name>
+<value>2181</value>
+</property>
+
+<property>
+<name>hive.server2.support.dynamic.service.discovery</name>
+<value>true</value>
+</property>
+
+<property>
+<name>hive.server2.zookeeper.namespace</name>
+<value>hiveserver2</value>
+</property>
+
+3.	Now start the hiveserver2 on whichever nodes you want to run it. Connect to the Hive server using the ZooKeeperdiscovery, as follows:
+beeline>!connect jdbc:hive2://master1.cyrus.com:2181,edge1.cyrus.com:2181,rt1.cyrus.com:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2
+
+Loading data into Hive
+
+hive> LOAD DATA LOCAL INPATH './examples/files/kv1.txt' OVERWRITE INTO TABLE pokes;
+
+5.
+
+$ hadoop fs -cat /user/hive/warehouse/test.db/pokes/kv1.txt | head -1 | tr -d "\n" | od -An | -t dC
+
+8.
+
+hive> CREATE external TABLE pokes (foo INT, bar STRING) ROW FORMAT DELIMITED LINES TERMINATED BY '\n' stored as textfile location '/user/hive/warehouse/test.db/';
+
+Partitioning and Bucketing in HIve
+
+2.
+
+hive> CREATE TABLE invites (foo INT, bar STRING) PARTITIONED BY (ds STRING);
+hive> LOAD DATA LOCAL INPATH'./hive/examples/files/kv2.txt' OVERWRITE INTO TABLE invites PARTITION (ds='2008-08-15');
+hive> LOAD DATA LOCAL INPATH'./examples/files/kv3.txt' OVERWRITE INTO TABLE invites PARTITION (ds='2008-08-08');
+
+7.
+
+create table emp_bucket (EmployeeIDInt,FirstNameString,DesignationString,SalaryInt,Department String) clustered by (department) into 3 buckets row format delimited fields terminated by ",";
+
+Hive metastore database
+
+8.
+
+mysql> select * from PARTITIONS;
+
+10.
+
+select TBLS.TBL_NAME,SDS.LOCATION
+from SDS,TBLS
+where TBLS.SD_ID = SDS.SD_ID;
+
+11.
+
+select TBLS.TBL_NAME,PARTITIONS.PART_NAME,SDS.LOCATION
+from SDS,TBLS,PARTITIONS
+where PARTITIONS.SD_ID = SDS.SD_ID
+and TBLS.TBL_ID=PARTITIONS.TBL_ID
+order by 1,2;
+
+Designing Hive with credential store
+
+2.
+
+<property>
+<name>hive.server2.enable.doAs</name>
+<value>false</value>
+</property>
+
+<property>
+<name>hive.users.in.admin.role</name>
+<value>root</value>
+</property>
+
+<property>
+<name>hive.security.metastore.authorization.manager</name>
+<value>org.apache.hadoop.hive.ql.security.authorization.StorageBasedAuthorizationProvider,org.apache.hadoop.hive.ql.security.authorization.MetaStoreAuthzAPIAuthorizerEmbedOnly</value>
+</property>
+
+<property>
+<name>hive.security.authorization.manager</name>
+<value>org.apache.hadoop.hive.ql.security.authorization.plugin.sqlstd.SQLStdConfOnlyAuthorizerFactory</value>
+</property>
+
+3.	Create a new file hiveserver2-site.xml, with the following contents:
+<property>
+<name>hive.security.authorization.manager</name>
+<value>org.apache.hadoop.hive.ql.security.authorization.plugin.sqlstd.SQLStdHiveAuthorizerFactory</value>
+</property>
+
+<property>
+<name>hive.security.authenticator.manager</name>
+<value>org.apache.hadoop.hive.ql.security.SessionStateUserAuthenticator</value>
+</property>
+
+<property>
+<name>hive.conf.restricted.list</name>
+<value>hive.security.authorization.enabled,hive.security.authorization.manager,hive.security.authenticator.manager</value>
+</property>
+
+5.
+
+set role ADMIN;
+
+8.
+
+grant  src_role_wadmin to user hadoop with admin option;
+
+10.
+
+show principals src_role_wadmin;
+
+
+Configuring Flume
+
+4.
+
+$ wget http://apache.uberglobalmirror.com/flume/1.7.0/apache-flume-1.7.0-bin.tar.gz
+$ tar –xzvf apache-flume-1.7.0-bin.tar.gz
+$ ln –s apache-flume-1.7.0-bin flume
+
+5.	Firstly, configure a source agent by creating a file with any name. We will call it flume-source-agent.conf, and it will have the following contents:
+source_agent.sources = apache_server
+source_agent.sources.apache_server.type = exec
+source_agent.sources.apache_server.command = tail -f /var/log/httpd/access_log
+source_agent.sources.apache_server.batchSize = 1
+source_agent.sources.apache_server.channels = memoryChannel
+source_agent.sources.apache_server.interceptors = itimeihostitype
+
+7.
+
+source_agent.sources.apache_server.interceptors.itime.type = timestamp
+# http://flume.apache.org/FlumeUserGuide.html#host-interceptor
+source_agent.sources.apache_server.interceptors.ihost.type = host
+source_agent.sources.apache_server.interceptors.ihost.useIP = false
+source_agent.sources.apache_server.interceptors.ihost.hostHeader = host
+
+9.
+
+#http://flume.apache.org/FlumeUserGuide.html#avro-source
+collector.sources = AvroIn
+collector.sources.AvroIn.type = avro
+collector.sources.AvroIn.bind = 0.0.0.0
+collector.sources.AvroIn.port = 4545
+collector.sources.AvroIn.channels = mc1mc2
+
+## Channels ##
+## Source writes to 2 channels, one for each sink
+collector.channels = mc1mc2
+#http://flume.apache.org/FlumeUserGuide.html#memory-channel
+
+collector.channels.mc1.type = memory
+collector.channels.mc1.capacity = 100
+
+collector.channels.mc2.type = memory
+collector.channels.mc2.capacity = 100
+
+## Sinks ##
+collector.sinks = LocalOutHadoopOut
+
+10.
+
+## Write copy to Local Filesystem
+#http://flume.apache.org/FlumeUserGuide.html#file-roll-sink
+collector.sinks.LocalOut.type = file_roll
+collector.sinks.LocalOut.sink.directory = /var/log/flume-ng
+collector.sinks.LocalOut.sink.rollInterval = 0
+collector.sinks.LocalOut.channel = mc1
+
+11.	Write to a file on HDFS with the output format as text:
+## Write to HDFS
+#http://flume.apache.org/FlumeUserGuide.html#hdfs-sink
+collector.sinks.HadoopOut.type = hdfs
+collector.sinks.HadoopOut.channel = mc2
+collector.sinks.HadoopOut.hdfs.path = /user/hadoop/flume-channel/%{log_type}/%y%m%d
+collector.sinks.HadoopOut.hdfs.fileType = DataStream
+collector.sinks.HadoopOut.hdfs.writeFormat = Text
+collector.sinks.HadoopOut.hdfs.rollSize = 0
+collector.sinks.HadoopOut.hdfs.rollCount = 10000
+collector.sinks.HadoopOut.hdfs.rollInterval = 600
+
+13.
+
+$ flume-ng agent -c conf -f flume/conf/flume-tgt-agent.conf -n collector
+$ flume-ng agent -c conf -f flume/conf/flume-source-agent.conf -n source_agent
+
+Oozie configuration and workflow
+
+3.
+
+<targetJavaVersion>1.8</targetJavaVersion>
+<hadoop.version>2.3.0</hadoop.version>
+<hbase.version>0.94.2</hbase.version>
+<hcatalog.version>0.13.1</hcatalog.version>
+
+7.
+
+$ tar –zxvfoozie-4.1.0-distro.tar.gz –C /opt/cluster/
+$ ln –s oozie-4.1.0-distro oozie
+
+8.
+
+export OOZIE_HOME=/opt/cluster/oozie
+PATH=$OOZIE_HOME/bin:$PATH
+
+9.
+
+$ mkdir /opt/cluster/oozie/libext
+
+10.
+
+path ./oozie-4.1.0/hadooplibs/target/oozie-4.1.0-hadooplibs/oozie-4.1.0/hadooplibs/hadooplib-2.3.0.oozie-4.1.0/*
+
+14.
+
+$ oozie-setup.sh prepare-war
+
+16.
+
+<property>
+    <name>hadoop.proxyuser.oozie.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.oozie.groups</name>
+    <value>*</value>
+  </property>
+	
+19.
+
+$ oozie-setup.shsharelib create -fs hdfs://master1.cyrus.com:9000
+
+21.
+
+<property>
+<name>oozie.service.JPAService.jdbc.driver</name>
+<value>com.mysql.jdbc.Driver</value>
+</property>
+
+<property>
+<name>oozie.service.JPAService.jdbc.url</name>
+<value>jdbc:mysql://master1.cyrus.com:3306/OOZIEDB</value>
+</property>
+
+<property>
+<name>oozie.service.JPAService.jdbc.username</name>
+<value>hadoop</value>
+</property>
+
+<property>
+<name>oozie.service.JPAService.jdbc.password</name>
+<value>Axxx</value>
+</property>
+
+24.
+
+$ oooziedb.sh create -sqlfileoozie.sql -run
+
+25.
+
+ooziedb.sh create -sqlfile oozie.sql -run
+
+
+
+$ hadoop fs –put examples /user/hadoop/
+$ oozie job -oozie http://edge1.cyrus.com:11000/oozie -config examples/apps/map-reduce/job.properties –run
+
+
+
+

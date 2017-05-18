@@ -1,0 +1,508 @@
+Tuning the operating system
+
+3.
+
+/etc/security/limits.conf file and adding the following lines:
+hdfs	-	nofile		50000
+hdfs	-	noproc		35000
+hadoop    -nofile		50000
+hadoop    -    noproc      35000
+mapred   -    nofile		50000
+mapred    -    noproc      35000
+
+
+10.
+
+echo never > /sys/kernel/mm/transparent_hugepage/enabled
+echo never > /sys/kernel/mm/transparent_hugepage/defrag
+
+
+Tuning the network
+
+4.
+net.ipv4.ip_local_port_range = 1024 65535
+
+5.	Enable TCP socket reuse and recycle by using the following line:
+net.ipv4.tcp_tw_recycle = 1
+net.ipv4.tcp_tw_reuse = 1
+
+6.
+net.ipv4.tcp_max_syn_backlog = 4096
+net.core.netdev_max_backlog = 2000
+
+7.	Change the send and receive socket buffer size by using the below settings. By, default, 16MB is more than enough per socket:
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+
+8.	Prevent SYN flood, by controlling the half open connections by using the following parameter:
+net.ipv4.tcp_syncookies = 1
+
+9.	Increase the listening queue length, as this will help in communication between nodes. By default, this is just set to 1024 and can be changed as follows:
+net.core.somaxconn = 4096
+
+10.	Always keep some memory free for network traffic and not cause OOM. This can be done by reserving free memory. The default is 64 MB, increase this on systems with large memory:
+vm.min_free_kbytes = 67584
+
+11.
+
+# echo "MTU=9000">> /etc/sysconfig/network-scripts/ifcfg-eth0
+
+12.
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+
+13.
+
+net.ipv4.conf.all.rp_filter = 1
+
+14.
+
+net.ipv6.conf.all.disable_ipv6=1
+net.ipv6.conf.default.disable_ipv6=1
+
+Tuning HDFS
+
+2.
+
+<property>
+<name>dfs.blocksize</name>
+<value>134217728</value>
+</property>
+
+3.
+
+<property>
+<name>dfs.replication</name>
+<value>3</value>
+</property>
+
+6.
+dfs.namenode.fs-limits.min-block-size = 1048576
+
+7.
+dfs.namenode.fs-limits.max-blocks-per-file = 1048576
+
+
+Tuning Namenode
+
+1.
+
+<property>
+<name>dfs.namenode.name.dir</name>
+<value>file:/data/namenode1,file:/data/namenode2</value>
+</property>
+
+5.
+
+$ hdfs oiv -p XML -printToScreen -i /data/namenode1/current/fsimage_0000000000000026487 | egrep"block|inode" | wc -l | awk'{printf"Objects=%d : Suggested Xms=%0dmXmx=%0dm\n", $1, (($1 / 1000000 )*1024), (($1 / 1000000 )*1024)}'
+
+9.
+
+<property>
+<name>dfs.namenode.handler.count</name>
+<value>60</value>
+</property>
+
+11.
+
+<property>
+<name>dfs.blockreport.initialDelay</name>
+<value>10</value>
+</property>
+
+12.
+
+<property>
+<name>dfs.namenode.safemode.extension</name>
+<value>50000</value>
+</property>
+
+14.
+
+<property>
+<name>dfs.namenode.decommission.blocks.per.interval</name>
+<value>500000</value>
+</property>
+
+16.
+
+<property>
+<name>dfs.namenode.decommission.max.concurrent.tracked.nodes</name>
+<value>500000</value>
+</property>
+
+17.
+
+<property>
+<name>dfs.namenode.support.allow.format</name>
+<value>false</value>
+</property>
+
+Tuning Datanode
+
+3.
+
+<property>
+<name>dfs.datanode.handler.count</name>
+<value>40</value>
+</property>
+
+4.
+
+<property>
+<name>dfs.datanode.max.transfer.threads</name>
+<value>8192</value>
+</property>
+
+5.
+
+<property>
+<name>dfs.datanode.directoryscan.threads</name>
+<value>2</value>
+</property>
+
+6.
+
+<property>
+<name>dfs.datanode.balance.bandwidthPerSec</name>
+<value>1048576</value>
+</property>
+
+7.
+
+<property>
+<name>dfs.datanode.failed.volumes.tolerated</name>
+<value>19</value>
+</property>
+
+8.
+
+<property>
+<name>dfs.datanode.fsdataset.volume.choosing.policy</name>
+<value>org.apache.hadoop.hdfs.server.datanode.fsdataset.AvailableSpaceVolumeChoosingPolicy</value>
+</property>
+
+<property>
+<name>dfs.datanode.available-space-volume-choosing-policy.balanced-space-threshold</name>
+<value>10737418240</value>
+</property>
+
+<property>
+<name>dfs.datanode.available-space-volume-choosing-policy.balanced-space-preference-fraction</name>
+<value>0.75f</value>
+</property>
+
+Configuring YARN for performance
+
+3.
+<property>
+<name>yarn.nodemanager.resource.memory-mb</name>
+<value>8192</value>
+</property>
+
+4.
+
+<property>
+<name>yarn.scheduler.maximum-allocation-mb</name>
+<value>8192</value>
+</property>
+
+5.
+
+<property>
+<name>yarn.scheduler.minimum-allocation-mb</name>
+<value>32</value>
+</property>
+
+6.
+
+<property>
+<name>yarn.app.mapreduce.am.resource.mb</name>
+<value>1536</value>
+</property>
+
+7.
+
+<property>
+<name>yarn.scheduler.capacity.maximum-am-resource-percent</name>
+<value>0.3</value>
+</property>
+
+8.
+
+<property>
+<name>yarn.scheduler.maximum-allocation-vcores</name>
+<value>32</value>
+</property>
+
+<property>
+<name>yarn.scheduler.minimum-allocation-vcores</name>
+<value>1</value>
+</property>
+
+9.
+
+<property>
+<name>yarn.nodemanager.vmem-check-enabled</name>
+<value>true</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.vmem-pmem-ratio</name>
+<value>2.1</value>
+</property>
+
+10.
+
+export YARN_NODEMANAGER_HEAPSIZE=2048
+export YARN_RESOURCEMANAGER_HEAPSIZE=4096
+
+11.
+
+YARN_OPTS="$YARN_OPTS -server -Djava.net.preferIPv4Stack=true -XX:+UseConcMarkSweepGC"
+
+14.
+
+<property>
+<name>yarn.resourcemanager.scheduler.client.thread-count</name>
+<value>30</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.resource-tracker.client.thread-count</name>
+<value>20</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.client.thread-count</name>
+<value>20</value>
+</property>
+
+15.
+
+<property>
+<name>yarn.nodemanager.container-manager.thread-count</name>
+<value>20</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.localizer.fetch.thread-count</name>
+<value>10</value>
+</property>
+
+ConfiguringMapReduce for performance
+
+3.
+
+<property>
+<name>mapreduce.task.io.sort.mb</name>
+<value>200</value>
+</property>
+
+4.
+
+<property>
+<name>mapreduce.task.io.sort.factor</name>
+<value>24</value>
+</property>
+
+5.
+
+<property>
+<name>mapreduce.cluster.local.dir</name>
+<value>/space/tmp</value>
+</property>
+
+6.
+
+<property>
+<name>mapreduce.map.memory.mb</name>
+<value>2048</value>
+</property>
+
+7.
+
+<property>
+<name>mapreduce.reduce.memory.mb</name>
+<value>4096</value>
+</property>
+
+8.
+
+<property>
+<name>mapreduce.map.java.opts</name>
+<value>-Xmx1664m</value>
+</property>
+
+<property>
+<name>mapreduce.reduce.java.opts</name>
+<value>-Xmx3328m</value>
+</property>
+
+10.
+
+<property>
+<name>dfs.storage.policy.enabled</name>
+<value>true</value>
+</property>
+
+11.
+
+<property>
+<name>mapreduce.tasktracker.http.threads</name>
+<value>60</value>
+</property>
+
+12.
+
+<property>
+<name>mapreduce.reduce.shuffle.parallelcopies</name>
+<value>10</value>
+</property>
+
+14.
+
+<property>
+<name>mapreduce.map.output.compress</name>
+<value>true</value>
+</property>
+
+<property>
+<name>mapreduce.output.fileoutputformat.compress.type</name>
+<value>BLOCK</value>
+</property>
+
+<property>
+<name>mapreduce.map.output.compress.codec</name>
+<value>org.apache.hadoop.io.compress.SnappyCodec</value>
+</property>
+
+15.
+
+<property>
+<name>mapreduce.map.cpu.vcores</name>
+<value>1</value>
+</property>
+
+<property>
+<name>mapreduce.reduce.cpu.vcores</name>
+<value>1</value>
+</property>
+
+16.
+
+<property>
+<name>mapreduce.reduce.shuffle.input.buffer.percent</name>
+<value>0.70</value>
+</property>
+
+17.
+
+<property>
+<name>mapreduce.job.jvm.numtasks</name>
+<value>10</value>
+</property>
+
+20.
+
+<property>
+<name>mapreduce.job.reduce.slowstart.completedmaps</name>
+<value>0.20</value>
+</property>
+
+Hive performance tuning
+
+4.
+
+<property>
+<name>hive.exec.local.scratchdir</name>
+<value>/space/scratch</value>
+</property>
+
+5.
+
+<property>
+<name>hive.exec.compress.output</name>
+<value>false</value>
+</property>
+
+6.
+
+<property>
+<name>hive.exec.reducers.bytes.per.reducer</name>
+<value>256000000</value>
+</property>
+
+7.
+
+<property>
+<name>hive.mapred.reduce.tasks.speculative.execution</name>
+<value>false</value>
+</property>
+
+8.
+
+<property>
+<name>hive.metastore.fshandler.threads</name>
+<value>40</value>
+</property>
+
+9.
+
+<property>
+<name>hive.metastore.server.min.threads</name>
+<value>400</value>
+</property>
+
+Benchmarking Hadoop cluster
+
+2.
+
+$ hadoop jar hadoop-mapreduce-client-jobclient-2.7.2-tests.jarDFSCIOTest -write -nrFiles 10 -fileSize 1000
+
+4.
+
+$ hadoop jar hadoop-mapreduce-client-jobclient-2.7.2-tests.jarDFSCIOTest -read -nrFiles 10 -fileSize 1000
+
+Benchmark 2:
+
+1.
+
+$ hadoop jar hadoop-mapreduce-client-jobclient-2.7.2-tests.jarnnbench -operation create_write -blockSize 67108864
+
+2.
+
+nnbench -operation create_write -blockSize 134217728 – bytesToWrite 10000
+
+Benchmark 3:
+
+1.
+
+$ hadoop jar hadoop-mapreduce-client-jobclient-2.7.2-tests.jarmrbench -numRuns 10 -maps 100 -reduces 100 -inputLines 1
+
+2.
+
+mrbench -numRuns 10 -maps 1000 -reduces 1000 -inputLines 100000
+
+3.
+
+mrbench -numRuns 10 -maps 1000 -reduces 1 -inputLines 100000
+
+Benchmark 4:
+
+1.
+$ hadoop jar hadoop-mapreduce-example.jarteragen 10000000000 /teraout
+
+2.
+$ hadoop jar hadoop-mapreduce-example.jarterasort /teraout /sorted
+
+3.
+$ hadoop jar hadoop-mapreduce-example.jarteravalidate /sorted /validated
+
+
+There's more ...
+
+hdfs jmxget –server localhost –port 8004 –service Namenode 
+
+
+
+

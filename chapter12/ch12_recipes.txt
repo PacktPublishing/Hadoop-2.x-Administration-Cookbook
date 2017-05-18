@@ -1,0 +1,345 @@
+Configurations:
+
+<property>
+    <name>hadoop.security.key.provider.path</name>
+    <value>kms://http@nn1.cluster1.com:16000/kms</value>
+</property>
+4.	Edit the hdfs-site.xml file and make the changes as shown here:
+<property>
+    <name>dfs.encryption.key.provider.uri</name>
+    <value>kms://http@nn1.cluster1.com:16000/kms</value>
+</property>
+5.	 Copy the modified files across all the nodes in the cluster and restart the HDFS daemons.
+--
+<property>
+    <name>hadoop.kms.cache.enable</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hadoop.kms.cache.timeout.ms</name>
+    <value>600000</value>
+</property>
+
+<property>
+    <name>hadoop.kms.current.key.cache.timeout.ms</name>
+    <value>30000</value>
+</property>
+21.	Control the cache at the Namenode by editing core-site.xml as follows:
+<property>
+    <name>hadoop.security.kms.client.encrypted.key.cache.size</name>
+    <value>500</value>
+</property>
+
+<property>
+    <name>hadoop.security.kms.client.encrypted.key.cache.low-watermark</name>
+    <value>0.3</value>
+</property>
+
+<property>
+    <name>hadoop.security.kms.client.encrypted.key.cache.num.refill.threads</name>
+    <value>2</value>
+</property>
+
+<property>
+    <name>hadoop.security.kms.client.encrypted.key.cache.expiry</name>
+    <value>43200000</value>
+</property>
+How it works...
+--
+<property>
+    <name>hadoop.rpc.protection</name>
+    <value>privacy</value>
+</property>
+15.	Edit hdfs-site.xml to add the following lines on each node in the cluster:
+<property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.https.enable</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.http.policy</name>
+    <value>HTTPS_ONLY</value>
+</property>
+
+<property>
+    <name>dfs.namenode.https-address</name>
+    <value>nn1.cluster1.com:50470</value>
+</property>
+16.	Add the following code according to the hostname on each of the datanodes in the cluster:
+<property>
+    <name>dfs.datanode.https.address</name>
+    <value>dn1.cluster1.com:50475</value>
+</property>
+17.	Edit yarn-site.xml as shown next for all the nodes in the cluster:
+<property>
+    <name>yarn.http.policy</name>
+    <value>HTTPS_ONLY</value>
+</property>
+
+<property>
+    <name>yarn.resourcemanager.webapp.https.address</name>
+    <value>jt1.cluster1.com:8089</value>
+</property>
+
+<property>
+    <name>yarn.nodemanager.webapp.https.address</name>
+    <value>0.0.0.0:8090</value>
+</property>
+18.	Now, configure ssl-server.xml on each node in the cluster, as shown next:
+--
+<property>
+    <name>ssl.server.truststore.type</name>
+    <value>jks</value>
+</property>
+
+<property>
+    <name>ssl.server.truststore.location</name>
+    <value>/opt/cluster/security/certs/host-truststore.jks</value>
+</property>
+
+<property>
+    <name>ssl.server.truststore.password</name>
+    <value>hadoop@123</value>
+</property>
+
+<property>
+    <name>ssl.server.truststore.reload.interval</name>
+    <value>10000</value>
+</property>
+
+<property>
+    <name>ssl.server.keystore.type</name>
+    <value>jks</value>
+</property>
+
+<property>
+    <name>ssl.server.keystore.location</name>
+    <value>/opt/cluster/security/certs/host-keystore.jks</value>
+</property>
+
+<property>
+    <name>ssl.server.keystore.password</name>
+    <value>hadoop@123</value>
+</property>
+
+<property>
+    <name>ssl.server.keystore.keypassword</name>
+    <value>hadoop@123</value>
+</property>
+
+--
+<property>
+    <name>ssl.client.truststore.type</name>
+    <value>jks</value>
+</property>
+
+<property>
+    <name>ssl.client.truststore.location</name>
+    <value>/opt/cluster/security/jks/truststore.jks</value>
+</property>
+
+<property>
+    <name>ssl.client.truststore.password</name>
+    <value>hadoop@123</value>
+</property>
+20.	Once the services are started, try to access the Web UI at port 50470, as shown in the following screenshot. As it is a self-signed certificate, you will see a warning message:
+--
+<property>
+    <name>hadoop.rpc.protection</name>
+    <value>privacy</value>
+</property>
+3.	To enable SSL for shuffle, edit the mapred-site.xml file and add the following lines:
+<property>
+    <name>hadoop.ssl.enabled</name>
+    <value>true</value>
+</property>
+4.	Now, edit the mapred-site.xml file and add all the following steps in the file, unless stated otherwise.
+--
+<property>
+    <name>mapreduce.shuffle.ssl.enabled</name>
+    <value>true</value>
+</property>
+6.	Enable hostname verification by adding the following lines to the file:
+<property>
+    <name>hadoop.ssl.require.client.cert</name>
+    <value>false</value>
+</property>
+
+<property>
+    <name>hadoop.ssl.hostname.verifier</name>
+    <value>DEFAULT</value>
+    <final>true</final>
+</property>
+--
+<property>
+    <name>hadoop.ssl.keystores.factory.class</name>
+    <value>org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory</value>
+    <final>true</final>
+</property>
+--
+<property>
+    <name>hadoop.ssl.server.conf</name>
+    <value>ssl-server.xml</value>
+    <final>true</final>
+</property>
+--
+<property>
+    <name>hadoop.ssl.client.conf</name>
+    <value>ssl-client.xml</value>
+    <final>true</final>
+</property>
+--
+<property>
+    <name>mapreduce.jobhistory.http.policy</name>
+    <value>HTTPS_ONLY</value>
+</property>
+
+<property>
+    <name>mapreduce.jobhistory.webapp.https.address</name>
+    <value>jt1.cluster1.com:19889</value>
+</property>
+9.	Now, edit the hdfs-site.xml file and add the following lines to enable transit encryption:
+<property>
+    <name>dfs.encrypt.data.transfer</name>
+    <value>true</value>
+</property>
+10.	Copy the file to all the nodes in the cluster and restart services.
+--
+<property>
+    <name>yarn.log.server.url</name>
+    <value>https://nn1.cluster1.com:19889/jobhistory/logs</value>
+</property>
+See also
+--
+<property>
+    <name>security.client.protocol.acl</name>
+    <value>*</value>
+</property>
+4.	In our cluster, Datanodes are running with user hdfs. Allow only the Datanodes running with this user to connect to Namenode by using the following configuration. Users can be specified using a comma-separated list and a group by using a space:
+<property>
+    <name>security.datanode.protocol.acl</name>
+    <value>hdfs</value>
+</property>
+5.	Which all users can submit jobs to the mapreduce cluster using the following configuration:
+<property>
+    <name>security.job.client.protocol.acl</name>
+    <value>user1 mapreduce</value>
+</property>
+6.	Control Secondary Namenode using the following configuration and control which group can run a functional Secondary Namenode.
+<property>
+    <name>security.job.client.protocol.acl</name>
+    <value>user1 mapreduce</value>
+</property>
+7.	Which users can run admin commands in the cluster.
+<property>
+    <name>security.admin.operations.protocol.acl</name>
+    <value>hdfs</value>
+</property>
+8.	Which users can refresh user Mapping in the cluster using the following settings:
+<property>
+    <name>security.refresh.policy.protocol.acl</name>
+    <value>Hadoop,hdfs</value>
+</property>
+9.	Copy the hadoop-policy.xml file to all the nodes in the cluster and use the following commands to load the changes. There are two authorization controls, one for each master:
+--
+<property>
+    <name>hadoop.security.authentication</name>
+    <value>kerberos</value>
+</property>
+
+<property>
+    <name>hadoop.security.authorization</name>
+    <value>true</value>
+</property>
+2.	Now, edit the hdfs-site.xml file on Namenode, as shown in the following screenshot:
+<property>
+    <name>dfs.block.access.token.enable</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.namenode.keytab.file</name>
+    <value>/opt/cluster/security/nn.hdfs.keytab</value>
+</property>
+
+<property>
+    <name>dfs.namenode.kerberos.principal</name>
+    <value>nn/_HOST@CLUSTER1.COM</value>
+</property>
+
+<property>
+    <name>dfs.namenode.kerberos.http.principal</name>
+    <value>host/_HOST@CLUSTER1.COM</value>
+</property>
+
+<property>
+    <name>dfs.namenode.kerberos.internal.spnego.principal</name>
+    <value>HTTP/_HOST@CLUSTER1.COM</value>
+</property>
+3.	Now, edit the hdfs-site.xml file on Datanodes as shown here:
+<property>
+    <name>dfs.datanode.keytab.file</name>
+    <value>/opt/cluster/security/dn.hdfs.keytab</value>
+</property>
+
+<property>
+    <name>dfs.datanode.kerberos.principal</name>
+    <value>dn/_HOST@CLUSTER1.COM</value>
+</property>
+
+<property>
+    <name>dfs.datanode.kerberos.https.principal</name>
+    <value>host/_HOST@CLUSTER1.COM</value>
+</property>
+
+<property>
+    <name>dfs.namenode.kerberos.principal</name>
+    <value>nn/_HOST@CLUSTER1.COM</value>
+</property>
+4.	Now, edit the yarn-site.xml file as shown in the following screenshot:
+<property>
+    <name>yarn.resourcemanager.principal</name>
+    <value>yarn/_HOST@HADOOP.COM</value>
+</property>
+<property>
+    <name>yarn.resourcemanager.keytab</name>
+    <value>/opt/cluster/security/yarn.keytab</value>
+</property>
+<property>
+    <name>yarn.nodemanager.principal</name>
+    <value>yarn/_HOST@HADOOP.COM</value>
+</property>
+
+--
+<property>
+    <name>yarn.nodemanager.keytab</name>
+    <value>/opt/cluster/security/yarn.keytab</value>
+</property>
+
+
+
+Commands:
+
+$ sudo su - hdfs
+$ hdfs namenode –format
+$ sudo su - yarn
+$ start-yarn.sh
+export KMS_TEMP=${KMS_HOME}/temp
+$ hadoop key list
+$ mkdir –p /opt/cluster/security/certs
+$ mkdir –p /opt/cluster/security/jks
+$ for i in {dn1,dn2,dn3,dn4,jt1};do keytool -genkey -alias ${i}.cluster1.com -keyalg rsa -keysize 1024 -dname "CN=${i}.cluster1.com,OU=hadoop,O=Netxillon,L=Sydney,ST=NSW,C=AU" -keypass hadoop@123 -keystore ${i}-keystore.jks -storepass hadoop@123; done
+5.	Next we will export the certificate's public key for each host as shown in the following screenshot. We can use a simple for loop to generate the keys for all hosts. The command used within the for loop is keytool -export -alias ${i}.cluster1.com -keystore ${i}-keystore.jks -rfc -file ${i}.crt -storepass hadoop@123:
+7.	Now, we will import the preceding exported key into the trust store using the keytool -import -noprompt -alias ${i}.cluster1.com -file ${i}.crt -keystore ${i}-truststore.jks -storepass hadoop@123 command in a loop, as shown in the following screenshot:
+8.	Create a single trust store file from all the preceding store keys using the keytool -import -noprompt -alias ${i}.cluster1.com -file ${i}.crt -keystore truststore.jks -storepass hadoop@123 command. This is shown in the following screenshot:
+9.	Now, we need to copy truststore.jks and ${i}-keystore.jks and ${i}-truststore.jks file to the respective nodes in the cluster. This is shown in the following screenshot:
+$ keytool -list -v -keystore /opt/cluster/security/certs/host-keystore.jks
+$ keytool -list -v -keystore /opt/cluster/security/certs/host-truststore.jks
+$ hdfs dfsadmin -refreshServiceAcl
+$ yarn rmadmin -refreshServiceAcl

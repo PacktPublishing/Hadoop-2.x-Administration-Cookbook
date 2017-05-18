@@ -1,0 +1,296 @@
+8.	Edit hdfs-site.xml, to add nameservice, metadata location and cluster members, as follows.
+<property>
+<name>dfs.nameservices</name>
+<value>mycluster</value>
+</property>
+
+<property>
+<name>dfs.namenode.name.dir</name>
+<value>file:/data/namenode</value>
+</property>
+
+<property>
+<name>dfs.ha.namenodes.mycluster</name>
+<value>master1,master2</value>
+</property>
+
+
+10.	To file hdfs-site.xml add the rpc and web server settings as shown as the follows:
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master1</name>
+  <value>master1.cyrus.com:9000</value>
+</property>
+
+
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master2</name>
+  <value>master2.cyrus.com:9000</value>
+</property>
+
+<property>
+  <name>dfs.namenode.http-address.mycluster.master1</name>
+  <value>master1.cyrus.com:50070</value>
+</property>
+
+<property>
+  <name>dfs.namenode.http-address.mycluster.master2</name>
+  <value>master2.cyrus.com:50070</value>
+</property>
+
+11.	Next is to configure failover proxy provider, using the configuration in the following code:
+<property>
+ <name>dfs.client.failover.proxy.provider.mycluster</name>
+<value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+
+12.	Configure shared store location to store edits files:
+<property>
+  <name>dfs.namenode.shared.edits.dir</name>
+  <value>file:///shared</value>
+</property>
+
+14. On any Datanode edit hdfs-site.xml and include the nameservice, rpc configuration and proxy failover settings as shown in the following code
+
+<property>
+  <name>dfs.nameservices</name>
+  <value>mycluster</value>
+</property>
+
+<property>
+  <name>dfs.ha.namenodes.mycluster</name>
+  <value>master1,master22</value>
+</property>
+
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master1</name>
+  <value>master1.cyrus.com:9000</value>
+</property>
+
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master2</name>
+  <value>master2.cyrus.com:9000</value>
+</property>
+
+<property>
+  <name>dfs.client.failover.proxy.provider.mycluster</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+
+
+20.	When the Namenodes are started, both will be in standby mode. User has to explicitly switch the Namenode to Active mode as show in the following screenshot:
+$ hdfs haadmin -getServiceState master1
+  master1 is Standby
+$ hdfs haadmin –transitionToActive master1
+
+
+ZooKeeper configuration
+
+3.	Un-tar the tarball 
+$ tar -xzvf zookeeper-3.4.9.tar.gz -C /opt/cluster
+
+4.	Change to directory /opt/cluster/ and create a sym-link as follows:
+$ ln –s zookeeper-3.4.9 zoo
+
+5.	Next is to setup environment variable in .bash_profile as follows:
+export ZOOKEEPER_HOME=/opt/cluster/zoo
+
+6.	Make sure the environment variable is exported and available:
+$ echo $ZOOKEEPER_HOME
+/opt/cluster/zoo
+
+11.	Add the list of servers to the file:
+server.1=master1.cyrus.com:2888:3888
+server.2=master2.cyrus.com:2888:3888
+server.3=rm1.cyrus.com:2888:3888
+
+Namenode HA using Journal node
+
+5.	In core-site.xml add the following ZooKeeper settings:
+<property>
+  <name>ha.zookeeper.quorum</name>
+  <value>master1.cyrus.com:2181, master2.cyrus.com:2181, rm1.cyrus.com:2181</value>
+</property>
+
+6.	Edit hdfs-site.xml, to add nameservice, metadata location and cluster members, as show in the following code:
+<property>
+  <name>dfs.nameservices</name>
+  <value>mycluster</value>
+</property>
+
+<property>
+  <name>dfs.namenode.name.dir</name>
+  <value>file:/data/namenode</value>
+</property>
+
+<property>
+  <name>dfs.ha.namenodes.mycluster</name>
+  <value>master1,master2</value>
+</property>
+
+8.	To file hdfs-site.xml add the rpc and web server settings as shown in the below code:
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master1</name>
+  <value>master1.cyrus.com:9000</value>
+</property>
+
+
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master2</name>
+  <value>master2.cyrus.com:9000</value>
+</property>
+
+<property>
+  <name>dfs.namenode.http-address.mycluster.master1</name>
+  <value>master1.cyrus.com:50070</value>
+</property>
+
+<property>
+  <name>dfs.namenode.http-address.mycluster.master2</name>
+  <value>master2.cyrus.com:50070</value>
+</property>
+
+
+9.	Next is to configure failover proxy provider, using the following configuration:
+<property>
+  <name>dfs.client.failover.proxy.provider.mycluster</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+
+10.	Configure Journal node settings and enable automatic failover:
+<property>
+<name>dfs.ha.automatic-failover.enabled</name>
+<value>true</value>
+</property>
+
+<property>
+<name>dfs.journalnode.edits.dir</name>
+<value>/data/mycluster</value>
+</property>
+
+<property>
+<name>dfs.namenode.shared.edits.dir</name>
+<value>qjournal://master1.cyrus.com:8485;master2.cyrus.com:8485;rm1.cluster1.com:8485/mycluster</value>
+</property>
+
+
+12.	On any Datanode edit "hdfs-site.xml" and include the nameservice, rpc configuration and proxy failover settings as shownas follows:
+<property>
+  <name>dfs.nameservices</name>
+  <value>mycluster</value>
+</property>
+
+<property>
+  <name>dfs.ha.namenodes.mycluster</name>
+  <value>master1,master22</value>
+</property>
+
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master1</name>
+  <value>master1.cyrus.com:9000</value>
+</property>
+
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.master2</name>
+  <value>master2.cyrus.com:9000</value>
+</property>
+
+<property>
+  <name>dfs.client.failover.proxy.provider.mycluster</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+
+
+Resourcemanager HA using Zookeeper
+
+4. Edit the file "yarn-site.xml" and add the below lines to enable Resourcemanager HA and assign a cluster ID.
+	<property>
+  <name>yarn.resourcemanager.ha.enabled</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>yarn.resourcemanager.cluster-id</name>
+  <value>cyrus</value>
+</property>
+
+5. Edit the file "yarn-site.xml" to specify the participating nodes in the cluster.
+<property>
+  <name>yarn.resourcemanager.ha.rm-ids</name>
+  <value>rm1,rm2</value>
+</property>
+
+<property>
+  <name>yarn.resourcemanager.hostname.rm1</name>
+  <value>master1.cyrus.com</value>
+</property>
+
+<property>
+  <name>yarn.resourcemanager.hostname.rm2</name>
+  <value>master2.cyrus.com</value>
+</property>
+
+6. Edit the file "yarn-site.xml" to configure Resourcemanger web UI.
+<property>
+  <name>yarn.resourcemanager.webapp.address.rm1</name>
+  <value>master1.cyrus.com:8088</value>
+</property>
+
+<property>
+  <name>yarn.resourcemanager.webapp.address.rm2</name>
+  <value>master2.cyrus.com:8088</value>
+</property>
+
+7. Edit the file "yarn-site.xml" to add Zookeeper configuration.
+<property>
+  <name>yarn.resourcemanager.zk-address</name>
+  <value>master1.cyrus.com:2181,master2.cyrus.com:2181,rm1.cyrus.com:2181</value>
+</property>
+
+Extra section:
+
+<property>
+  <name>yarn.resourcemanager.recovery.enabled</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>yarn.resourcemanager.work-preserving-recovery.scheduling-wait-ms</name>
+  <value>master2.cyrus.com:8088</value>
+	<description>Set the amount of time RM waits before allocating new containers on RM work-preserving recovery. </description>
+</property>
+
+<property>
+<name>yarn.resourcemanager.resource-tracker.address.rm1</name>
+<value>master1.cyrus.com:9001</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.scheduler.address.rm1</name>
+<value>master1.cyrus.com:9002</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.address.rm1</name>
+<value>master1.cyrus.com:9003</value>
+</property>
+
+
+Configure HDFS cache
+
+6.	The cache pools or directive can be removed or modified for TTLs and replication:
+$ hdfs cacheadmin -removeDirective <id>
+$ hdfs cacheadmin -removeDirective <path>
+$ hdfs cacheadmin -removePool <name>
+$ hdfs cacheadmin -modifyDirective -id 1 -path /projects -replication 1 -ttl 3600s
+
+Configure storage based policies
+
+4.	Edit hdfs-site.xml file and add the following configuration:
+<property>
+  <name>dfs.storage.policy.enabled</name>
+  <value>true</value>
+</property>
+
+7.	Apply the policy for a path using the following command:
+$ hdfs storagepolicies -setStoragePolicy -path <path> -policy <policy>
+

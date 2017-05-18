@@ -1,0 +1,238 @@
+Initiating Namenode saveNamespace
+
+2. Execute the following command:
+$ hdfs dfsadmin –safemode enter
+
+3.	Now, we will save the metadata of the cluster to make a consistent view with the help of the following command:
+$ hdfs dfsadmin –saveNamespace
+
+4. Command
+
+$ hdfs dfsadmin –savemode leave
+
+$ hdfs dfsadmin -rollEdits
+
+Using HDFS Image Viewer
+
+2.
+
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/data/namenode1</value>
+</property>
+
+5.	In order to see the contents of fsimage file, use the following command:
+
+$ hdfs oiv –i /data/namenode1/current/fsimage_xx –p XML –o fsimage.txt
+
+7.	Similarly, the contents of edits file can be seen using the following command:
+$ hdfs oev –i /data/namenode/current/edits_xx –o edits.txt
+
+Fetching parameters which are in-effect
+
+2.	To find the value of any parameter, use the following command:
+$ hdfs getconf –confkey dfs.blocksize
+$ hdfs getconf –confkey dfs.replication
+$ hdfs getconf –confkey mapreduce.map.memory.mb
+$ hdfs getconf –confkey yarn.scheduler.maximum-allocation-mb
+
+Configuring HDFS and YARN logs
+
+log4j.appender.RFA.File=${hadoop.log.dir}/${yarn.server.resourcemanager.appsummary.log.file}
+log4j.appender.MaxFileSize=256MB
+log4j.appender.MaxBackupIndex=20
+log4j.appender.RFA=org.apache.log4j.RollingFileAppender
+
+
+log4j.appender.RFA.layout=org.apache.log4j.PatternLayout
+log4j.appender.RFA.layout.ConversionPattern=%d{ISO8601} %p %c (%t): %m%n
+
+
+	Backing up and recovering Namenode
+	
+7.
+
+<property>
+    <name>fs.checkpoint.dir</name>
+    <value>/data/backup</value>
+</property>
+
+	Configuring Secondary Namenode
+	
+2.
+
+<property>
+    <name>dfs.http.address</name>
+    <value>master1.cyrus.com:50070</value>
+</property>
+
+3.
+
+<property>
+    <name>dfs.secondary.http.address</name>
+    <value>master2.cyrus.com:50090</value>
+</property>
+
+4.
+
+<property>
+    <name>fs.checkpoint.period</name>
+    <value>3600</value>
+</property>
+
+5.
+
+<property>
+    <name>fs.checkpoint.dir</name>
+    <value>/data/secondary</value>
+</property>
+
+6.
+
+<property>
+    <name>fs.checkpoint.edits.dir</name>
+    <value>/data/secedits</value>
+</property>
+
+
+
+Promoting Secondary Namenode to Primary
+
+8.
+
+<property>
+    <name>fs.checkpoint.dir</name>
+    <value>/data/secondary</value>
+</property>
+And change it to the following:
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/data/secondary</value>
+</property>
+
+Consider the following example:
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/data/namenode1,/data/namenode2</value>
+</property>
+
+
+Namenode roll edits - Online mode
+
+$ hdfs dfsadmin –safemode enter
+$ hdfs dfsadmin –saveNamespace
+$ hdfs dfsadmin –safemode leave
+
+16.
+
+<property>
+    <name>dfs.namenode.num.extra.edits.retained</name>
+    <value>4</value>
+</property>
+
+    <property>
+    <name>dfs.namenode.max.extra.edits.segments.retained</name>
+    <value>
+</property>
+
+20.
+
+<property>
+    <name>dfs.namenode.num.checkpoints.retained</name>
+    <value>1</value>
+</property>
+
+
+Namenode roll edits - Offline mode
+
+4.
+
+# mount –t nfs4 filer.cyrus.com:/nfs /mnt
+
+6.
+
+<property>
+    <name>fs.checkpoint.dir</name>
+    <value>/mnt</value>
+</property>
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/data/namenode</value>
+</property>
+
+Datanode recovery - Disk full
+
+<property>
+    <name>dfs.datanode.data.dir</name>
+    <value>/space/data2</value>
+</property>
+
+Configuring NFS gateway to serve HDFS
+
+2.
+
+<property>
+    <name>hadoop.proxyuser.nfsserver.groups</name>
+    <value>*</value>
+</property>
+
+3.
+
+<property>
+    <name>hadoop.proxyuser.nfsserver.hosts</name>
+    <value>*</value>
+</property>
+
+4.
+
+<property>
+    <name>dfs.nfs3.dump.dir</name>
+    <value>/tmp/.hdfs-nfs</value>
+</property>
+
+
+5.
+
+<property>
+    <name>dfs.nfs.rtmax</name>
+    <value>1048576</value>
+</property>
+
+<property>
+    <name>dfs.nfs.wtmax</name>
+    <value>65536</value>
+</property>
+
+6.
+
+<property>
+    <name>dfs.nfs.exports.allowed.hosts</name>
+    <value>* rw</value>
+</property>
+
+Other commands used:
+
+# hadoop-daemon.sh start portmap
+
+$ hadoop-daemon.sh start nfs3
+
+$ rpcinfo -p `hostname`
+
+$ showmount -e `hostname`
+
+13.
+
+$ sudo mount -t nfs -o vers=3,proto=tcp,nolock master1.cyrus.com:/ /data/nfs
+
+Recover deleted files
+
+4.
+
+$ hdfs oev -i edits_inprogress_000000000000000224 -o edits.xml
+
+7.
+
+$ hdfs oev -i edits.xml -o edits_inprogress_0000000000000000224 -p binary
+
+
+
