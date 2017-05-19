@@ -238,7 +238,7 @@ $ vi mapred-site.xml
 5.4 start services:
 
 $ yarn-daemon.sh start resourcemanager
-$ yarn-daemon.sh start nodeemanager
+$ yarn-daemon.sh start nodemanager
 
 5.5 Verify the services are up and running
 
