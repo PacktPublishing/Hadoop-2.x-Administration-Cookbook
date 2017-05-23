@@ -1,0 +1,368 @@
+Chapter 1:
+
+# means you are loggedin as root, else use sudo su - as first step.
+
+1.2 Change as root
+	# sudo su -
+	
+1.3 Install the dependencies to build Hadoop
+	# yum install gcc gcc-c++ openssl-devel make cmake jdk-1.7u45 -y
+	
+1.4	Download and install Maven:
+	# wget http://mirrors.gigenet.com/apache/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+
+1.5	Untar Maven:
+	# tar -zxf apache-maven-3.3.9-bin.tar.gz -C /opt/
+
+1.6	Setup the Maven environment:
+
+# cat /etc/profile.d/maven.sh
+export JAVA_HOME=/usr/java/latest
+export M3_HOME=/opt/apache-maven-3.3.9
+export PATH=$JAVA_HOME/bin:/opt/apache-maven-3.3.9/bin:$PATH
+
+1.7 Download and setup protobuf:
+# wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.gz
+# tar -xzf protobuf-2.5.0.tar.gz -C /root
+# cd /opt/protobuf-2.5.0/
+# ./configure
+# make;make install
+
+1.8 Download the latest Hadoop stable source code. At the time of writing, the latest Hadoop version is 2.7.3:
+
+# wget apache.uberglobalmirror.com/hadoop/common/stable2/hadoop-2.7.3-src.tar.gz
+# tar -xzf hadoop-2.7.3-src.tar.gz -C /opt/
+# cd /opt/hadoop-2.7.2-src
+# mvn package -Pdist,native -DskipTests -Dtar
+
+-------------+++++++++-----------
+
+2.1 Create a file vi /etc/yum.repos.d/bigtop.repo (referrence: https://www-us.apache.org/dist/bigtop/bigtop-1.0.0/repos/centos6/bigtop.repo)
+[bigtop]
+name=Bigtop
+enabled=1
+gpgcheck=1
+type=NONE
+baseurl=http://bigtop-repos.s3.amazonaws.com/releases/1.0.0/centos/6/x86_64
+gpgkey=https://dist.apache.org/repos/dist/release/bigtop/KEYS
+
+2.2 Sync the repo to location on disk, which has space.
+
+# reposync –r bigtop
+
+-------------+++++++++-----------
+
+3.1 Change the hostname
+
+# vi /etc/sysconfig/network
+NETWORKING=yes
+HOSTNAME=master1.cyrus.com
+
+3.2 Edit the file "/etc/hosts"
+127.0.0.1		localhost localhost.localdomain
+10.0.0.104	master1.cyrus.com
+
+3.3 Verify resolution by using the command:
+
+# getent hosts master1.cyrus.com
+
+3.4 IF DNS is configured, then only:
+
+# nslookup master1.cyrus.com
+
+-------------+++++++++-----------
+
+4.0 Firstly, create a user named hadoop with password. Givven in step 6. order is fine
+
+# useradd hadoop
+# echo "password" | passwd hadoop --stdin
+
+4.1 Install JDK, as stated minimum 1.7 is needed
+
+# yum install jdk –y
+or it can also be installed using the command as below
+# rpm –ivh jdk-1.7u45.rpm
+
+4.2 Export JAVA_HOME
+
+export JAVA_HOME=/usr/java/latest (Set it in .bash_profile of user hadoop)
+
+4.3 Copy the tarball built in the previous recipe
+
+# scp –r hadoop-2.7.3.tar.gz root@nn1.cluster1.com:~/
+
+4.4 Create a directory:
+
+# mkdir –p /opt/cluster
+
+4.5 Untar hadoop:
+
+# tar –xzvf hadoop-2.7.3.tar.gz  -C /opt/Cluster/
+
+4.6 added user hadoop, if not there
+
+4.7 Correct permissions:
+
+# chown -R hadoop:hadoop /opt/cluster/
+
+4.14 Setup env
+# vi /etc/profile.d/hadoopenv.sh
+
+export HADOOP_HOME=/home/hadoop/hadoop
+export JAVA_HOME=/usr/java/latest
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export YARN_HOME=$HADOOP_HOME
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
+PATH=$HADOOP_HOME/bin/:$HADOOP_HOME/sbin/:$JAVA_HOME/bin/:$PATH
+export PATH
+
+4.15 Make the changes effective:
+
+# . /etc/profile.d/hadoopenv.sh
+
+4.16 Change to user hadoop
+
+# su - hadoop
+
+4.17 change to directory "/opt/cluster/" and create symlink as shown in the picture:
+
+# ln -s hadoop-2.7.3 hadoop
+
+4.19 Add JAVA_HOME to hadoop-env.sh (any place)
+
+vi /opt/cluster/hadoop/etc/hadoop/hadoop-env.sh
+
+export JAVA_HOME=/usr/java/latest
+
+4.20 Edit the core-site.xml file "vi /opt/cluster/hadoop/etc/hadoop/core-site.xml"
+<configuration>
+<property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://master1.cyrus.com:9000</value>
+</property>
+
+</configuration>
+
+4.22 edit "/opt/cluster/hadoop/etc/hadoop/hdfs-site.xml"
+
+</configuration>
+
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:/data/namenode</value>
+</property>
+
+</configuration>
+
+4.23 
+
+$ sudo mkdir /data/{namenode,datanode}
+$ sudo chown –R hadoop:hadoop /data/ 
+
+4.24 Add for Datanode to file "hdfs-site.xml"
+
+<property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:/data/datanode</value>
+</property>
+
+
+4.25 Format Namenode
+
+$ hdfs namenode -format 
+
+4.26 start the services
+
+$ hadoop-daemon.sh start namenode
+$ hadoop-daemon.sh start datanode
+ 
+4.27
+
+$ jps
+
+-------------+++++++++-----------
+
+5.1 Switch user  to hadoop, if already not
+
+# su - hadoop 
+
+5.2 Change directory, if already not there.
+
+$ cd /opt/cluster/hadoop/etc/hadoop
+
+$ vi mapred-site.xml
+
+<configuration>
+
+<property>
+<name>mapreduce.framework.name</name>
+<value>yarn</value>
+</property>
+
+</configuration>
+
+5.3 vi yarn-site.xml
+
+<configuration>
+
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.resource-tracker.address</name>
+<value>master1.cyrus.com:9001</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.scheduler.address</name>
+<value>master1.cyrus.com:9002</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.address</name>
+<value>master1.cyrus.com:9003</value>
+</property>
+
+</configuration>
+
+5.4 start services:
+
+$ yarn-daemon.sh start resourcemanager
+$ yarn-daemon.sh start nodemanager
+
+5.5 Verify the services are up and running
+
+$ jps
+
+-------------+++++++++-----------
+
+6.4 Copy hadoop package to all nodes in the cluster, change IP address according to your setup
+
+$ for i in 192.168.1.{72..75};do scp -r hadoop-2.7.3 $i:/opt/cluster/ $i;done
+
+6.6 
+
+$ cd /opt/cluster
+$ ln –s hadoop-2.7.3 hadoop
+
+6.10
+$ vi hdfs-site.xml
+
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:/data/namenode</value>
+</property>
+
+6.11
+
+$ vi hdfs-site.xml
+
+<property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:/data/datanode</value>
+</property>
+
+6.12 On all nodes in the cluster
+
+vi yarn-site.xml
+
+<configuration>
+
+<property>
+<name>yarn.nodemanager.aux-services</name>
+<value>mapreduce_shuffle</value>
+</property>
+
+<property>
+<name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.resource-tracker.address</name>
+<value>jt1.cyrus.com:9001</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.scheduler.address</name>
+<value>jt1.cyrus.com:9002</value>
+</property>
+
+<property>
+<name>yarn.resourcemanager.address</name>
+<value>jt1.cyrus.com:9003</value>
+</property>
+
+</configuration>
+
+
+6.14 Start the services
+
+$ hadoop-daemon.sh start namenode
+
+6.15
+
+$ hadoop-daemon.sh start datanode
+$ yarn-daemon.sh start nodemanager
+
+6.16
+
+$ yarn-daemon.sh start resourcemanager
+
+6.18 Copy a file "test.txt" to HDFS:
+
+$ hadoop fs –put test.txt /
+
+6.19 Pi estimation
+
+$ yarn jar /opt/cluster/hadoop/share/hadoop/mapreduce/hadoop-example.jar Pi 3 3
+
+-------------+++++++++-----------
+
+8.1 file hdfs-site.xml 
+
+<property>
+<name>dfs.hosts.exclude</name>
+<value>/home/hadoop/excludes</value>
+<final>true</final>
+</property>
+
+8.3 Restart Namenode:
+
+$ hadoop-daemons.sh stop namenode
+$ hadoop-daemons.sh start namenode
+
+8.5 Add any node to the file:
+
+$ cat excludes
+dn1.cluster1.com
+
+8.6
+
+$ hadoop dfsadmin -refreshNodes
+
+8.7 
+
+$ hdfs dfsadmin -report
+
+-------------+++++++++-----------
+
+9.1 Add to hdfs-site.xml
+
+<property>
+<name>dfs.hosts</name>
+<value>/home/hadoop/includes</value>
+<final>true</final>
+</property>
+
+

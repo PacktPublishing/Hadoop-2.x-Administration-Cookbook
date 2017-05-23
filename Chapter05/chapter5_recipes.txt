@@ -1,0 +1,383 @@
+Configuring users and groups
+
+2.	As user root, create the required users as follows. The assumption is that the group Hadoop already exists, as the cluster is pre-existing:
+  # useradd -G hadoop user1
+  # useradd -G hadoop user2
+3.	Create directories for the User and update permissions on HDFS as user hadoop:
+  $ hadoop  fs –mkdir /user/user1/
+  $ hadoop  fs –mkdir /user/user2/
+
+  $ hadoop fs –chown –R user1:hadoop /user/user1/
+  $ hadoop fs –chown –R user2:hadoop /user/user2/
+
+Fair Scheduler configuration
+
+2.	Edit the yarn-site.xml as follows:
+  <property>
+    <name>yarn.resourcemanager.scheduler.class</name>
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
+  </property>
+
+3.	<property>
+	    <name>yarn.scheduler.fair.allocation.file</name>
+	    <value>/opt/cluster/hadoop/etc/Hadoop/fair-scheduler.xml</value>
+  </property>
+
+
+Fair Scheduler pools
+
+17.
+
+<allocations>
+
+<pool name="prod">
+<minMaps>10</minMaps>
+<minReduces>5</minReduces>
+</pool>
+
+<pool name="dev">
+<minMaps>10</minMaps>
+<minReduces>5</minReduces>
+</pool>
+
+</allocations>
+
+21.
+
+<property>
+  <name>mapred.jobtracker.taskScheduler</name>
+  <value>org.apache.hadoop.mapred.FairScheduler</value>
+</property>
+
+22.	In Fair Scheduler, that mapping can be done between pool and queues using the following settings:
+<property>
+  <name>mapred.fairscheduler.poolnameproperty</name>
+  <value>mapred.job.queue.name</value>
+</property>
+
+Configuring job queues
+
+2.
+
+<?xml version="1.0"?>
+<allocations>
+  <queue name="prod">
+    <minResources>100 mb,0vcores</minResources>
+    <maxResources>4000 mb,0vcores</maxResources>
+    <maxRunningApps>20</maxRunningApps>
+    <maxAMShare>0.2</maxAMShare>
+    <weight>1.0</weight>
+    <schedulingPolicy>fair</schedulingPolicy>
+  </queue>
+
+<queue name="dev">
+    <minResources>100 mb,0vcores</minResources>
+    <maxResources>3000 mb,0vcores</maxResources>
+    <maxAMShare>0.6</maxAMShare>
+    <weight>1.0</weight>
+    <schedulingPolicy>fair</schedulingPolicy>
+  </queue>
+
+  <user name="hadoop">
+    <maxRunningApps>5</maxRunningApps>
+  </user>
+
+  <user name="d1">
+    <maxRunningApps>1</maxRunningApps>
+  </user>
+
+  <user name="d2">
+    <maxRunningApps>1</maxRunningApps>
+  </user>
+  <userMaxAppsDefault>5</userMaxAppsDefault>
+
+  <queuePlacementPolicy>
+      <rule name="specified" />
+      <rule name="primaryGroup" create="false" />
+      <rule name="nestedUserQueue">
+      <rule name="secondaryGroupExistingQueue" create="false" />
+      </rule>
+      <rule name="default" queue="default"/>
+  </queuePlacementPolicy>
+
+</allocations>
+
+8.
+
+$ yarn jar /opt/cluster/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.3.jar wordcount -D mapreduce.queue.name=prod /file1.txt /out2
+
+13.
+
+<property>
+    <name>yarn.scheduler.fair.allow-undeclared-pools</name>
+    <value>false</value>
+</property>
+<property>
+    <name>yarn.scheduler.fair.user-as-default-queue</name>
+    <value>false</value>
+</property>
+
+14.
+
+<?xml version="1.0"?>
+<allocations>
+  <queue name="prod">
+    <aclAdministerApps>hadoop</aclAdministerApps>
+    <aclSubmitApps>hadoop</aclSubmitApps>
+    <minResources>1000 mb,0vcores</minResources>
+    <maxResources>6000 mb,100vcores</maxResources>
+    <maxRunningApps>20</maxRunningApps>
+    <weight>1.0</weight>
+    <schedulingPolicy>fair</schedulingPolicy>
+  </queue>
+
+  <queue name="dev">
+  <aclAdministerApps>d1</aclAdministerApps>
+  <aclSubmitApps>d1</aclSubmitApps>
+  <minResources>1000 mb,0vcores</minResources>
+  <maxResources>6000 mb,100vcores</maxResources>
+  <maxRunningApps>20</maxRunningApps>
+  <weight>1.0</weight>
+  <schedulingPolicy>fair</schedulingPolicy>
+  </queue>
+</queue>
+  <user name="hadoop">
+    <maxRunningApps>5</maxRunningApps>
+  </user>
+
+  <user name="d1">
+    <maxRunningApps>1</maxRunningApps>
+  </user>
+
+  <user name="d2">
+    <maxRunningApps>1</maxRunningApps>
+  </user>
+  <userMaxAppsDefault>5</userMaxAppsDefault>
+
+     <queuePlacementPolicy>
+         <rule name="specified" />
+         <rule name="primaryGroup" create="false" />
+            <rule name="nestedUserQueue">
+           <rule name="secondaryGroupExistingQueue" create="false" />
+            </rule>
+      <rule name="default" queue="default"/>
+    </queuePlacementPolicy>
+</allocations>
+
+15.
+
+$ yarn jar /opt/cluster/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.3.jar wordcount -D mapreduce.job.queuename=prod /file1.txt /user/d1/out6
+
+Job queue ACLs
+
+
+3.	Edit the fair-scheduler.xml allocation file as shown next. Note the users specified for the specific queues (within the <queue> tags) and also that the root queue is being restrictive:
+
+<?xml version="1.0"?>
+<allocations>
+<queue name="root">
+<aclAdministerApps>hadoop</aclAdministerApps>
+<aclSubmitApps> </aclSubmitApps>
+  <queue name="prod">
+    <aclAdministerApps>hadoop</aclAdministerApps>
+    <aclSubmitApps>hadoop</aclSubmitApps>
+    <minResources>1000 mb,0vcores</minResources>
+    <maxResources>6000 mb,100vcores</maxResources>
+    <maxRunningApps>20</maxRunningApps>
+    <weight>1.0</weight>
+    <schedulingPolicy>fair</schedulingPolicy>
+  </queue>
+
+  <queue name="dev">
+  <aclAdministerApps>d1</aclAdministerApps>
+  <aclSubmitApps>d1</aclSubmitApps>
+  <minResources>1000 mb,0vcores</minResources>
+  <maxResources>6000 mb,100vcores</maxResources>
+  <maxRunningApps>20</maxRunningApps>
+  <weight>1.0</weight>
+  <schedulingPolicy>fair</schedulingPolicy>
+  </queue>
+</queue>
+  <user name="hadoop">
+    <maxRunningApps>5</maxRunningApps>
+  </user>
+
+  <user name="d1">
+    <maxRunningApps>1</maxRunningApps>
+  </user>
+
+  <user name="d2">
+    <maxRunningApps>1</maxRunningApps>
+  </user>
+  <userMaxAppsDefault>5</userMaxAppsDefault>
+
+
+        <queuePlacementPolicy>
+            <rule name="specified" />
+            <rule name="primaryGroup" create="false" />
+            <rule name="nestedUserQueue">
+                <rule name="secondaryGroupExistingQueue" create="false" />
+            </rule>
+            <rule name="default" queue="default"/>
+          </queuePlacementPolicy>
+</allocations>
+
+Configuring Capacity Scheduler
+
+2.	Modify the yarn-site.xml file by changing the following parameter:
+
+<property>
+  <name>yarn.resourcemanager.scheduler.class</name>
+  <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value>
+</property>
+
+6.
+
+<property>
+    <name>yarn.scheduler.capacity.root.queues</name>
+    <value>default,prod,dev</value>
+</property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.default.capacity</name>
+    <value>30</value>
+	 <description>This is the percentage of the total capacity allocated to the default queue</description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.prod.capacity</name>
+    <value>50</value>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.dev.capacity</name>
+    <value>20</value>
+  </property>
+
+7.	Configure the allowed usage percentage per queue as shown here:
+
+   <property>
+   <name>yarn.scheduler.capacity.root.prod.user-limit-factor</name>
+  <value>1</value>
+  </property>
+  
+  <property>
+   <name>yarn.scheduler.capacity.root.dev.user-limit-factor</name>
+          <value>1</value>
+  </property>
+    
+  <property>
+          <name>yarn.scheduler.capacity.root.prod.maximum-capacity</name>
+          <value>100</value>
+  </property>
+  
+  <property>
+          <name>yarn.scheduler.capacity.root.dev.maximum-capacity</name>
+          <value>100</value>
+  </property>
+	
+8. Change the state of the queue to be in running state:
+   <property>
+    <name>yarn.scheduler.capacity.root.prod.state</name>
+     <value>RUNNING</value>
+   </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.dev.state</name>
+     <value>RUNNING</value>
+   </property>
+
+9.	Modify the queue ACLs and administrators of the queue:
+   <property>
+   <name>yarn.scheduler.capacity.root.default.acl_submit_applications</name>
+     <value>*</value>
+  </property>
+        
+   <property>
+          <name>yarn.scheduler.capacity.root.prod.acl_submit_applications</name>
+    <value>*</value>
+   </property>
+        
+  <property>
+               <name>yarn.scheduler.capacity.root.dev.acl_submit_applications</name>
+     <value>*</value>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.capacity.root.default.acl_administer_queue</name>
+    <value>*</value>
+  </property>
+
+  <property>
+        <name>yarn.scheduler.capacity.root.prod.acl_administer_queue</name>
+     <value>*</value>   
+  </property>
+        
+  <property>
+          <name>yarn.scheduler.capacity.root.dev.acl_administer_queue</name>
+    <value>*</value>   
+  </property>
+
+
+Queuing mappings in Capacity Scheduler
+
+2.
+
+<property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:d1:dev,g:group1:default,u:hadoop:prod</value>
+</property>
+
+
+5.
+
+$ yarn jar /opt/cluster/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-2.7.3.jar wordcount /file1.txt /out
+
+7.
+
+<property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:%user,u:user2:%primary_group</value>
+</property>
+
+9.
+
+<property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:hadoop:prod,u:%user:dev</value>
+</property>
+
+
+YARN label-based scheduling
+
+3.	Edit the yarn-site.xml file to enable labels, as shown next:
+<property>
+  <name>yarn.node-labels.enabled</name>
+  <value>true</value>
+</property>
+
+4.	Edit the yarn-site.xml file to link it to the labels created in the first step. Make sure to give the absolute path to the directory:
+<property>
+  <name>yarn.node-labels.fs-store.root-dir</name>
+  <value>hdfs://nn1.cluster1.com:9000/node-labels</value>
+</property>
+
+9.	Now, the next step is to associate Labels with the queues. For this, we will use the existing queues from the previous recipe and just make the changes for Labels, as shown next. Edit the capacity-scheduler.xml file and add the following to it:
+<property>
+ <name>yarn.scheduler.capacity.root.accessible-node-labels.memory.capacity</name>
+ <value>100</value>
+</property>
+
+<property>
+ <name>yarn.scheduler.capacity.root.prod.accessible-node-labels.memory.capacity</name>
+ <value>100</value>
+</property>
+
+<property>
+ <name>yarn.scheduler.capacity.root.prod.accessible-node-labels</name>
+ <value>memory</value>
+</property> 
+
+
+
+
