@@ -24,7 +24,9 @@ The code will look like the following:
 ```
 
 To go through the recipes in this book, users need any Linux distribution, which could be Ubuntu, Centos, or any other flvor, as long as it supports running JVM. We use Centos in our recipe, as it is the most commonly used operating system for Hadoop clusters.
-Hadoop runs on both virtualized and physical servers, so it is recommended to have at least 8 GB for the base system, on which about three virtual hosts can be set up. Users do not need to set up all the recipes covered in this book all at once; they can run only those daemons that are necessary for that particular recipe. This way, they can keep the resource requirements to the bare minimum. It is good to have at least four hosts to practice all the recipes in this book.These hosts could be virtual or physical.
+
+Hadoop runs on both virtualized and physical servers, so it is recommended to have at least 8 GB for the base system, on which about three virtual hosts can be set up. Users do not need to set up all the recipes covered in this book all at once; they can run only those daemons that are necessary for that particular recipe. This way, they can keep the resource requirements to the bare minimum. It is good to have at least four hosts to practice all the recipes in this book. These hosts could be virtual or physical.
+
 In terms of software, users need JDK 1.7 minimum, and any SSH client, such as PuTTY in Windows or Terminal, to connect to the Hadoop nodes.
 
 ## Related Products
